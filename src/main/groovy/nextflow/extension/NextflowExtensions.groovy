@@ -42,6 +42,9 @@ import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.group.DefaultPGroup
 import groovyx.gpars.group.PGroup
 import groovyx.gpars.scheduler.Pool
+import nextflow.splitter.BytesSplitter
+import nextflow.splitter.StringSplitter
+import nextflow.splitter.TextSplitter
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.FileHelper
@@ -88,6 +91,7 @@ class NextflowExtensions {
     }
 
 
+    @Deprecated
     @groovy.transform.PackageScope
     static chopInvoke( Closure closure, Object obj, int index ) {
         if( !closure ) return obj
@@ -337,6 +341,7 @@ class NextflowExtensions {
      *      chopped line(s) if container object has been specified.
      *
      */
+    @Deprecated
     static chopLines( Object obj, Map options = [:], Closure closure ) {
 
         if( obj instanceof CharSequence )
@@ -362,68 +367,9 @@ class NextflowExtensions {
         throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopText' method")
     }
 
+    @Deprecated
     static private chopLinesImpl( Reader reader, Map options = null , Closure closure ) {
-        assert reader != null
-        assert options != null
-
-        log.trace "Chop options: ${options}"
-        final size = options.count ?: 1
-        final into = options.into
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        BufferedReader reader0 = reader instanceof BufferedReader ? reader : new BufferedReader(reader)
-
-        def result = null
-        String line
-        int index = 0
-        StringBuilder buffer = new StringBuilder()
-        int c=0
-
-        try {
-
-            while( (line = reader0.readLine()) != null ) {
-                if ( c ) buffer << '\n'
-                buffer << line
-                if ( ++c == size ) {
-                    c = 0
-                    result = chopInvoke(closure, buffer.toString(), index++ )
-                    if( into != null )
-                        into << result
-
-                    buffer.setLength(0)
-                }
-            }
-
-        }
-        finally {
-            reader0.closeQuietly()
-        }
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            result = chopInvoke(closure, buffer.toString(), index )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
+        TextSplitter.instance.apply(reader, options, closure)
     }
 
     /// chopString
@@ -463,6 +409,7 @@ class NextflowExtensions {
      *      chopped sub-string if container object has been specified.
      *
      */
+    @Deprecated
     static chopString( Object object, Map options = [:] ) {
         chopString(object,options,null)
     }
@@ -508,6 +455,7 @@ class NextflowExtensions {
      *      chopped sub-string if container object has been specified.
      *
      */
+    @Deprecated
     static chopString( Object obj, Map options, Closure closure ) {
 
         if( obj instanceof CharSequence )
@@ -533,67 +481,7 @@ class NextflowExtensions {
     }
 
     static private chopStringImpl( Reader reader, Map options = [:] , Closure closure  ) {
-        assert reader != null
-        assert options != null
-
-        log.trace "Chop options: ${options}"
-        final count = options.count ?: 1
-        final into = options.into
-        final ignoreNewLine = options.ignoreNewLine == true ?: false
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        def result = null
-        def index = 0
-        def buffer = new StringBuilder()
-        int c = 0
-        def ch
-
-        try {
-
-            while( (ch=reader.read()) != -1 ) {
-                if( ignoreNewLine && ( ch == '\n' as char || ch == '\r' as char ))
-                    continue
-                buffer.append( (char)ch )
-                if ( ++c == count ) {
-                    c = 0
-                    result = chopInvoke(closure, buffer.toString(), index++ )
-                    if( into != null )
-                        into << result
-
-                    buffer.setLength(0)
-                }
-            }
-
-        }
-        finally {
-            reader.closeQuietly()
-        }
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-        if ( buffer.size() ) {
-            result = chopInvoke(closure, buffer.toString(), index++ )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
+        StringSplitter.instance.apply(reader,options,closure)
     }
 
 
@@ -633,6 +521,7 @@ class NextflowExtensions {
      *      byte array produced if container object has been specified.
      *
      */
+    @Deprecated
     static chopBytes( Object obj, Map options = [:]) {
         chopBytes(obj,options,null)
     }
@@ -677,6 +566,7 @@ class NextflowExtensions {
      *      byte array produced if container object has been specified.
      *
      */
+    @Deprecated
     static chopBytes( Object obj, Map options, Closure closure ) {
 
         if( obj instanceof CharSequence )
@@ -698,75 +588,9 @@ class NextflowExtensions {
 
     }
 
+    @Deprecated
     static private chopBytesImpl( InputStream stream, Map options = [:], Closure<byte[]> closure ) {
-        assert stream != null
-        assert options != null
-
-        log.trace "Chop options: ${options}"
-        final count = options.count ?: 1
-        final into = options.into
-        if( into && !(into instanceof Collection) && !(into instanceof DataflowQueue) )
-            throw new IllegalArgumentException("Argument 'into' can be a subclass of Collection or a DataflowQueue type -- Entered value type: ${into.class.name}")
-
-        def result = null
-
-        int c=0
-        int index = 0
-        byte[] buffer = new byte[count]
-        byte item
-
-        try {
-
-            while( (item=stream.read()) != -1 ) {
-                buffer[c] = (byte)item
-
-                if ( ++c == count ) {
-                    c = 0
-                    result = chopInvoke(closure, buffer, index++ )
-                    if( into != null )
-                        into << result
-
-                    buffer = new byte[count]
-                }
-            }
-
-        }
-        finally {
-            stream.closeQuietly()
-        }
-
-
-        /*
-         * if there's something remaining in the buffer it's supposed
-         * to be the last entry
-         */
-
-        if ( c ) {
-            if( c != count ) {
-                def copy = new byte[c]
-                System.arraycopy(buffer,0,copy,0,c)
-                buffer = copy
-            }
-
-            result = chopInvoke(closure, buffer, index++ )
-            if( into != null )
-                into << result
-        }
-
-        /*
-         * now close and return the result
-         * - when the target it's a channel, send stop message
-         * - when it's a list return it
-         * - otherwise return the last value
-         */
-        if( into instanceof DataflowWriteChannel ) {
-            into << PoisonPill.instance
-            return into
-        }
-        if( into != null )
-            return into
-
-        return result
+        BytesSplitter.instance.apply(stream, options, closure)
     }
 
 
@@ -831,6 +655,7 @@ class NextflowExtensions {
      *
      */
 
+    @Deprecated
     static chopFasta( Object obj, Map options = [:] ) {
         chopFasta( obj, options, null )
     }
@@ -896,6 +721,7 @@ class NextflowExtensions {
      * @see DataflowExtensions#chopFasta(groovyx.gpars.dataflow.DataflowReadChannel)
      *
      */
+    @Deprecated
     static chopFasta( Object obj, Map options = [:], Closure closure ) {
 
         if( obj instanceof CharSequence )
@@ -922,6 +748,7 @@ class NextflowExtensions {
         throw new IllegalAccessException("Object of class '${obj.class.name}' does not support 'chopFasta' method")
     }
 
+    @Deprecated
     static chopFastaImpl( Reader text, Map options = [:], Closure<String> closure ) {
         assert text != null
         assert options != null
