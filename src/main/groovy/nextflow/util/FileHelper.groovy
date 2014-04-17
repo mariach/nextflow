@@ -25,16 +25,13 @@ import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
 import embed.com.google.common.hash.HashCode
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.extension.FilesExtensions
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@CompileStatic
 class FileHelper {
 
     static private Random rndGen = new Random()

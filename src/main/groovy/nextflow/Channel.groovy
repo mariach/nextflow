@@ -260,6 +260,7 @@ class Channel {
 
     }
 
+    @Deprecated
     static DataflowChannel readLines( Map options = [:], Object source ) {
         assert source != null
         assert options != null
@@ -268,7 +269,7 @@ class Channel {
         return (DataflowQueue) source.chopLines(options)
     }
 
-
+    @Deprecated
     static DataflowChannel readLines( Map options = [:], Object source, Closure closure ) {
         assert source != null
         assert options != null
@@ -277,6 +278,7 @@ class Channel {
         return (DataflowQueue) source.chopLines(options,closure)
     }
 
+    @Deprecated
     static DataflowChannel readFasta( Map options = [:], Object source ) {
         assert source != null
         assert options != null
@@ -285,6 +287,7 @@ class Channel {
         return (DataflowQueue) source.chopFasta(options)
     }
 
+    @Deprecated
     static DataflowChannel readFasta( Map options = [:], Object source, Closure closure ) {
         assert source != null
         assert options != null
