@@ -21,9 +21,7 @@
 package nextflow.script
 import static nextflow.util.ConfigHelper.parseValue
 
-import java.lang.reflect.Field
 import java.nio.file.Path
-import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.JCommander
 import com.beust.jcommander.ParameterException
@@ -491,9 +489,6 @@ class CliRunner {
                 println "N E X T F L O W  ~  version ${Const.APP_VER}"
             }
 
-            // -- check file system providers
-            checkFileSystemProviders()
-
             // create the config object
             def config = makeConfig(options)
 
@@ -584,39 +579,6 @@ class CliRunner {
             throw new FileNotFoundException("File do not exist: $file")
         }
         return file
-    }
-
-    static private void checkFileSystemProviders() {
-
-        // check if this class has been loaded
-        boolean isInstalled = false
-        FileSystemProvider.installedProviders().each {
-            log.debug "Installed File System: '${it.scheme}' [${it.class.simpleName}]"
-            if( it.scheme == 'dxfs' ) {
-                isInstalled = true
-            }
-        }
-
-        if( !isInstalled ) {
-            // try to load DnaNexus file system provider dynamically
-            Class provider
-            try {
-                provider = Class.forName('nextflow.fs.dx.DxFileSystemProvider')
-            }
-            catch( ClassNotFoundException e ) {
-                log.debug "DxFileSystemProvider NOT available"
-                return
-            }
-
-            // add it manually
-            Field field = FileSystemProvider.class.getDeclaredField('installedProviders')
-            field.setAccessible(true)
-            List installedProviders = new ArrayList((List)field.get(null))
-            installedProviders.add( provider.newInstance() )
-            field.set(this, Collections.unmodifiableList(installedProviders))
-            log.debug "Added 'DxFileSystemProvider' to list of installed providers [dxfs]"
-        }
-
     }
 
 
